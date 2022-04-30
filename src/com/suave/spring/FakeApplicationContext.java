@@ -1,10 +1,14 @@
 package com.suave.spring;
 
+import com.suave.spring.annotations.Autowired;
 import com.suave.spring.annotations.Component;
 import com.suave.spring.annotations.ComponentScan;
 import com.suave.spring.annotations.Scope;
 
+import java.beans.Introspector;
 import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,6 +51,9 @@ public class FakeApplicationContext {
                                 // 如果是component注解，则添加到容器中
                                 Component component = clazz.getAnnotation(Component.class);
                                 String beanName = component.value();
+                                if ("".equals(beanName)) {
+                                    beanName = Introspector.decapitalize(clazz.getSimpleName());
+                                }
                                 BeanDefinition beanDefinition = new BeanDefinition();
                                 beanDefinition.setType(clazz);
                                 if (clazz.isAnnotationPresent(Scope.class)) {
@@ -69,13 +76,28 @@ public class FakeApplicationContext {
         for (String beanName : beanDefinitionMap.keySet()) {
             BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
             if ("singleton".equals(beanDefinition.getScope())) {
-
+                Object bean = createBean(beanName, beanDefinition);
+                singletonBeanMap.put(beanName, bean);
             }
         }
     }
 
     private Object createBean(String beanName, BeanDefinition beanDefinition) {
-        return null;
+        Class type = beanDefinition.getType();
+        Object instance = null;
+        try {
+            instance = type.getConstructor().newInstance();
+            for (Field declaredField : type.getDeclaredFields()) {
+                if (declaredField.isAnnotationPresent(Autowired.class)) {
+                    // 如果存在依赖注入注解，就设置一下这个值
+                    declaredField.setAccessible(true);
+                    declaredField.set(instance, getBean(declaredField.getName()));
+                }
+            }
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+        return instance;
     }
 
 
@@ -96,8 +118,7 @@ public class FakeApplicationContext {
             return bean;
         } else {
             // 多例
-
+            return createBean(beanName, beanDefinition);
         }
-        return beanDefinition;
     }
 }

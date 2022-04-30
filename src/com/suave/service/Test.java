@@ -10,6 +10,7 @@ public class Test {
     public static void main(String[] args) {
         FakeApplicationContext fakeApplicationContext = new FakeApplicationContext(AppConfig.class);
         UserService  userService = (UserService) fakeApplicationContext.getBean("userService");
+        userService.test();
     }
 
 }
