@@ -1,5 +1,6 @@
 package com.suave.service;
 
+import com.suave.spring.BeanNameAware;
 import com.suave.spring.annotations.Autowired;
 import com.suave.spring.annotations.Component;
 import com.suave.spring.annotations.Scope;
@@ -9,12 +10,19 @@ import com.suave.spring.annotations.Scope;
  */
 @Scope("prototype")
 @Component
-public class UserService {
+public class UserService implements BeanNameAware {
+
+    private String beanName;
 
     @Autowired
     private OrderService orderService;
 
     public void test(){
         System.out.println(orderService);
+    }
+
+    @Override
+    public void setBeanName(String beanName) {
+        this.beanName = beanName;
     }
 }

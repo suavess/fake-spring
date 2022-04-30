@@ -87,12 +87,17 @@ public class FakeApplicationContext {
         Object instance = null;
         try {
             instance = type.getConstructor().newInstance();
+            // 依赖注入
             for (Field declaredField : type.getDeclaredFields()) {
                 if (declaredField.isAnnotationPresent(Autowired.class)) {
                     // 如果存在依赖注入注解，就设置一下这个值
                     declaredField.setAccessible(true);
                     declaredField.set(instance, getBean(declaredField.getName()));
                 }
+            }
+            // 判断是否实现了beanNameAware接口
+            if (instance instanceof BeanNameAware) {
+                ((BeanNameAware) instance).setBeanName(beanName);
             }
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
