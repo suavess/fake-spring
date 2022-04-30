@@ -1,8 +1,13 @@
 package com.suave.spring;
 
+import com.suave.spring.annotations.Component;
+import com.suave.spring.annotations.ComponentScan;
+import com.suave.spring.annotations.Scope;
+
 import java.io.File;
-import java.lang.annotation.Annotation;
 import java.net.URL;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author suave
@@ -10,6 +15,10 @@ import java.net.URL;
 public class FakeApplicationContext {
 
     private Class configClass;
+
+    private final Map<String, BeanDefinition> beanDefinitionMap  = new ConcurrentHashMap<>();
+
+    private final Map<String, Object> singletonBeanMap = new ConcurrentHashMap<>();
 
     public FakeApplicationContext(Class configClass) {
         this.configClass = configClass;
@@ -35,20 +44,60 @@ public class FakeApplicationContext {
                         try {
                             clazz = classLoader.loadClass(path.replace("/", ".") + "." + classNameWithoutSuffix);
                             if (clazz.isAnnotationPresent(Component.class)) {
-                                 // 如果是component注解，则添加到容器中
-                                                            }
+                                // 如果是component注解，则添加到容器中
+                                Component component = clazz.getAnnotation(Component.class);
+                                String beanName = component.value();
+                                BeanDefinition beanDefinition = new BeanDefinition();
+                                beanDefinition.setType(clazz);
+                                if (clazz.isAnnotationPresent(Scope.class)) {
+                                    // 如果是scope注解，则设置scope
+                                    beanDefinition.setScope(clazz.getAnnotation(Scope.class).value());
+                                } else {
+                                    beanDefinition.setScope("singleton");
+                                }
+                                beanDefinitionMap.put(beanName, beanDefinition);
+                            }
                         } catch (ClassNotFoundException e) {
                             e.printStackTrace();
                         }
                     }
                 }
-            } else {
-                 
+            }
+        }
+
+        // 创建bean实例
+        for (String beanName : beanDefinitionMap.keySet()) {
+            BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+            if ("singleton".equals(beanDefinition.getScope())) {
+
             }
         }
     }
 
-    public Object getBean(String beanName) {
+    private Object createBean(String beanName, BeanDefinition beanDefinition) {
         return null;
+    }
+
+
+    public Object getBean(String beanName) {
+        BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+        if (beanDefinition == null) {
+            throw new NullPointerException();
+        }
+        String scope = beanDefinition.getScope();
+        if ("singleton".equals(scope)) {
+            // 单例
+            Object bean = singletonBeanMap.get(beanName);
+            if (bean == null) {
+                Object createBean = createBean(beanName, beanDefinition);
+                singletonBeanMap.put(beanName, createBean);
+                return createBean;
+            }
+            return bean;
+        } else {
+            // 多例
+
+        }
+        return beanDefinition;
     }
 }

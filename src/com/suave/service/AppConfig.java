@@ -1,6 +1,6 @@
 package com.suave.service;
 
-import com.suave.spring.ComponentScan;
+import com.suave.spring.annotations.ComponentScan;
 
 /**
  * @author suave
