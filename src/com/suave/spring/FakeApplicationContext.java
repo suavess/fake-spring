@@ -10,8 +10,10 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author suave
@@ -23,6 +25,8 @@ public class FakeApplicationContext {
     private final Map<String, BeanDefinition> beanDefinitionMap  = new ConcurrentHashMap<>();
 
     private final Map<String, Object> singletonBeanMap = new ConcurrentHashMap<>();
+
+    private final List<BeanPostProcessor> beanPostProcessorList = new CopyOnWriteArrayList<>();
 
     public FakeApplicationContext(Class configClass) {
         this.configClass = configClass;
@@ -48,6 +52,10 @@ public class FakeApplicationContext {
                         try {
                             clazz = classLoader.loadClass(path.replace("/", ".") + "." + classNameWithoutSuffix);
                             if (clazz.isAnnotationPresent(Component.class)) {
+                                if (BeanPostProcessor.class.isAssignableFrom(clazz)) {
+                                    // 如果是BeanPostProcessor，添加到beanPostProcessorList
+                                    beanPostProcessorList.add((BeanPostProcessor) clazz.newInstance() );
+                                }
                                 // 如果是component注解，则添加到容器中
                                 Component component = clazz.getAnnotation(Component.class);
                                 String beanName = component.value();
@@ -64,7 +72,7 @@ public class FakeApplicationContext {
                                 }
                                 beanDefinitionMap.put(beanName, beanDefinition);
                             }
-                        } catch (ClassNotFoundException e) {
+                        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
                             e.printStackTrace();
                         }
                     }
@@ -99,9 +107,17 @@ public class FakeApplicationContext {
             if (instance instanceof BeanNameAware) {
                 ((BeanNameAware) instance).setBeanName(beanName);
             }
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
+                // 调用postProcessBeforeInitialization方法
+                beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
+            }
             // 判断是否实现了InitializingBean接口
             if (instance instanceof InitializingBean) {
                 ((InitializingBean) instance).afterPropertiesSet();
+            }
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
+                // 调用postProcessAfterInitialization方法
+                beanPostProcessor.postProcessAfterInitialization( instance, beanName);
             }
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
