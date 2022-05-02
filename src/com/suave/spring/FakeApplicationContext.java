@@ -109,7 +109,7 @@ public class FakeApplicationContext {
             }
             for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
                 // 调用postProcessBeforeInitialization方法
-                beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
+                instance = beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
             }
             // 判断是否实现了InitializingBean接口
             if (instance instanceof InitializingBean) {
@@ -117,7 +117,7 @@ public class FakeApplicationContext {
             }
             for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
                 // 调用postProcessAfterInitialization方法
-                beanPostProcessor.postProcessAfterInitialization( instance, beanName);
+                instance = beanPostProcessor.postProcessAfterInitialization( instance, beanName);
             }
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
